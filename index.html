@@ -136,6 +136,23 @@ function runCard(r, title, hint) {
     <div class="kpi"><b>${r.signals}</b><span>signals</span></div></div></div>`;
 }
 
+function results() {
+  const R = S.results;
+  if (!R) return "";
+  const row = k => {
+    const g = R[k], l = g.last;
+    const roi = g.invested ? g.pnl_sol / g.invested : null;
+    return `<div class="row"><span class="main"><span class="one">${k === "total" ? "<b>Total</b>" : esc(g.title)}
+        <span class="mut small"> · ${g.closed} closed · win ${g.win_rate == null ? "–" : Math.round(g.win_rate * 100) + "%"} · open ${g.open}</span></span>
+        <span class="one mut small">w/o best ${sol(g.pnl_ex_best)} · best ${sol(g.best)}</span>
+        ${l ? `<span class="one small">last: <a class="mono" href="https://gmgn.ai/sol/token/${esc(l.mint)}">${short(l.mint)}</a>
+          <b class="${cls(l.pnl_sol)}">${sol(l.pnl_sol)}</b> <span class="mut">${esc(l.reason)} · ${ago(l.ts)}</span></span>` : ""}</span>
+      <span class="side"><b class="${cls(g.pnl_sol)}" style="font-size:16px">${g.closed ? sol(g.pnl_sol) : "–"}</b><br>
+        <span class="small ${cls(roi)}">${roi == null ? "" : pct(roi)}</span></span></div>`;
+  };
+  return `<div class="card"><h3>Results <span class="sub">· SOL, all runs, fees included</span></h3>${["total", "followed", "probe"].map(row).join("")}</div>`;
+}
+
 function home() {
   const R = S.runs || {};
   const halted = S.risk.filter(r => r.halted);
@@ -147,9 +164,8 @@ function home() {
         <span class="pill ${S.kill ? "bad" : "ok"}">${S.kill ? "ON: entries blocked" : "off"}</span></span></span>
       <span class="side"><button class="act ${S.kill ? "" : "danger"}" onclick='action({action:"kill_toggle"},"${S.kill ? "Turn kill switch OFF?" : "Block all new entries?"}")'>${S.kill ? "Turn off" : "Stop entries"}</button></span></div></div>
     ${halted.length ? `<div class="card"><h3>Risk halts</h3>${halted.map(r => `<div class="row"><span class="main">${one(r.key.slice(11) || "paper")}</span><span class="side bad">${esc(r.halted)}</span></div>`).join("")}</div>` : ""}
+    ${results()}
     ${pipeline()}
-    ${runCard(R.followed, "Followed wallets", "passed the filter")}
-    ${runCard(R.probe, "Probe", "best rejected, for comparison")}
     <div class="card"><h3>Open positions</h3>${open}</div>
     <div class="card"><h3>Autopilot</h3>${(S.events || []).map(e => `<div class="row"><span class="main">${one(e.what)}</span>
        <span class="side mut small">${ago(e.ts)}</span></div>`).join("") || '<span class="mut small">no events</span>'}</div>`;
