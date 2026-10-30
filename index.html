@@ -163,7 +163,7 @@ function home() {
   return `<div class="card"><div class="row"><span class="main"><span class="one">Kill switch
         <span class="pill ${S.kill ? "bad" : "ok"}">${S.kill ? "ON: entries blocked" : "off"}</span></span></span>
       <span class="side"><button class="act ${S.kill ? "" : "danger"}" onclick='action({action:"kill_toggle"},"${S.kill ? "Turn kill switch OFF?" : "Block all new entries?"}")'>${S.kill ? "Turn off" : "Stop entries"}</button></span></div></div>
-    ${halted.length ? `<div class="card"><h3>Risk halts</h3>${halted.map(r => `<div class="row"><span class="main">${one(r.key.slice(11) || "paper")}</span><span class="side bad">${esc(r.halted)}</span></div>`).join("")}</div>` : ""}
+    ${halted.length ? `<div class="card"><h3>Live limits hit <span class="sub">· paper keeps trading</span></h3>${halted.map(r => `<div class="row"><span class="main">${one(r.key.slice(11) || "paper")}</span><span class="side warn">${esc(r.halted)}</span></div>`).join("")}</div>` : ""}
     ${results()}
     ${pipeline()}
     <div class="card"><h3>Open positions</h3>${open}</div>
