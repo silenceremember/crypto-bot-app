@@ -138,19 +138,22 @@ function runCard(r, title, hint) {
 
 function results() {
   const R = S.results;
-  if (!R) return "";
-  const row = k => {
-    const g = R[k], l = g.last;
+  if (!R || !R.view) return "";
+  const row = v => {
+    const g = R[v.key], l = g.last, a = g.at_stake;
     const roi = g.invested ? g.pnl_sol / g.invested : null;
-    return `<div class="row"><span class="main"><span class="one">${k === "total" ? "<b>Total</b>" : esc(g.title)}
+    return `<div class="row"><span class="main"><span class="one">${esc(v.title)}
         <span class="mut small"> · ${g.closed} closed · win ${g.win_rate == null ? "–" : Math.round(g.win_rate * 100) + "%"} · open ${g.open}</span></span>
-        <span class="one mut small">w/o best ${sol(g.pnl_ex_best)} · best ${sol(g.best)}${g.at_stake && g.at_stake.n ? ` · at ${g.at_stake.stake} SOL <b class="${cls(g.at_stake.pnl_sol)}">${sol(g.at_stake.pnl_sol)}</b>` : ""}</span>
+        <span class="one mut small">w/o best ${sol(g.pnl_ex_best)}${a && a.n ? ` · at ${a.stake} SOL <b class="${cls(a.pnl_sol)}">${sol(a.pnl_sol)}</b>` : ""}</span>
         ${l ? `<span class="one small">last: <a class="mono" href="https://gmgn.ai/sol/token/${esc(l.mint)}">${short(l.mint)}</a>
           <b class="${cls(l.pnl_sol)}">${sol(l.pnl_sol)}</b> <span class="mut">${esc(l.reason)} · ${ago(l.ts)}</span></span>` : ""}</span>
       <span class="side"><b class="${cls(g.pnl_sol)}" style="font-size:16px">${g.closed ? sol(g.pnl_sol) : "–"}</b><br>
         <span class="small ${cls(roi)}">${roi == null ? "" : pct(roi)}</span></span></div>`;
   };
-  return `<div class="card"><h3>Results <span class="sub">· SOL, all runs, fees included</span></h3>${["total", "followed", "probe", "watch", "followed_trailing", "probe_trailing", "followed_filtered", "probe_filtered"].filter(k => R[k]).map(row).join("")}</div>`;
+  const e = R.view.earlier || {};
+  const old = Object.keys(e).filter(k => e[k].closed).map(k => `${k} ${sol(e[k].pnl_sol)} (${e[k].closed})`).join(" · ");
+  return `<div class="card"><h3>Results <span class="sub">· trailing exit, SOL, fees included</span></h3>${R.view.rows.map(row).join("")}
+    ${old ? `<div class="one mut small">Before: old exit rule ${old}</div>` : ""}</div>`;
 }
 
 function home() {
