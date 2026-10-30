@@ -8,24 +8,39 @@
 <style>
 :root{--bg:var(--tg-theme-bg-color,#fff);--fg:var(--tg-theme-text-color,#111);--mut:var(--tg-theme-hint-color,#888);
 --card:var(--tg-theme-secondary-bg-color,#f2f2f5);--acc:var(--tg-theme-button-color,#2f7cf6);--accfg:var(--tg-theme-button-text-color,#fff);
---ok:#1a9a4a;--bad:#e5484d}
+--ok:#1a9a4a;--warn:#c98a12;--bad:#e5484d}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 -apple-system,system-ui,Segoe UI,sans-serif}
 nav{position:sticky;top:0;display:flex;background:var(--bg);border-bottom:1px solid var(--card);z-index:2}
 nav button{flex:1;padding:11px 4px;border:0;background:none;color:var(--mut);font:inherit;font-weight:600}
 nav button.on{color:var(--acc);box-shadow:inset 0 -2px 0 var(--acc)}
 main{padding:12px 12px 40px}
-.card{background:var(--card);border-radius:12px;padding:12px;margin-bottom:10px}
-h3{margin:0 0 8px;font-size:13px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.card{background:var(--card);border-radius:12px;padding:12px;margin-bottom:10px;overflow:hidden}
+h3{margin:0 0 8px;font-size:12px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+h3 .sub{text-transform:none;letter-spacing:0;font-weight:500}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.kpi b{display:block;font-size:17px}.kpi span{color:var(--mut);font-size:12px}
-.row{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--bg)}
+.kpi{min-width:0}.kpi b{display:block;font-size:17px;white-space:nowrap}.kpi span{color:var(--mut);font-size:12px}
+.row{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--bg);min-width:0}
 .row:first-of-type{border-top:0}
-.mut{color:var(--mut)}.ok{color:var(--ok)}.bad{color:var(--bad)}
+.row .main{flex:1;min-width:0}.row .side{flex:none;text-align:right;white-space:nowrap}
+.one{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mut{color:var(--mut)}.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+.small{font-size:12px}
 .mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
-button.act{border:0;border-radius:10px;padding:9px 12px;background:var(--acc);color:var(--accfg);font:inherit;font-weight:600}
-button.danger{background:var(--bad);color:#fff}button.ghost{background:none;color:var(--acc);padding:4px 0}
-pre{white-space:pre-wrap;word-break:break-all;margin:6px 0 0;font-size:11px;color:var(--mut)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mut);margin-right:6px;vertical-align:1px}
+.dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--bad)}
+.step{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--bg)}.step:first-of-type{border-top:0}
+.step .n{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;
+background:var(--bg);color:var(--mut)}
+.step.done .n{background:var(--ok);color:#fff}.step.run .n{background:var(--acc);color:var(--accfg)}
+.step .main{flex:1;min-width:0}.step .t{font-weight:600}
+.bar{height:6px;background:var(--bg);border-radius:3px;margin:5px 0 3px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--acc);border-radius:3px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;background:var(--bg);color:var(--mut)}
+.pill.ok{color:var(--ok)}.pill.bad{color:#fff;background:var(--bad)}
+button.act{border:0;border-radius:10px;padding:7px 12px;background:var(--acc);color:var(--accfg);font:inherit;font-weight:600;font-size:13px}
+button.danger{background:var(--bad);color:#fff}
 a{color:var(--acc);text-decoration:none}
 #err{display:none;background:var(--bad);color:#fff;padding:10px 12px}
 </style>
@@ -37,15 +52,18 @@ a{color:var(--acc);text-decoration:none}
 <script>
 const tg = window.Telegram && Telegram.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
-const TABS = [["home","Overview"],["trades","Trades"],["feeds","Data"],["jobs","Jobs"]];
+const TABS = [["home","Overview"],["trades","Trades"],["feeds","Data"]];
 let tab = "home", S = null;
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const sol = x => x == null ? "–" : (x >= 0 ? "+" : "") + Number(x).toFixed(4);
 const pct = x => x == null ? "–" : (x >= 0 ? "+" : "") + (x * 100).toFixed(1) + "%";
 const ago = t => { if (!t) return "–"; const s = Date.now() / 1000 - t; return s < 90 ? Math.round(s) + "s" : s < 5400 ? Math.round(s / 60) + "m" : Math.round(s / 3600) + "h"; };
-const short = m => esc((m || "?").slice(0, 6));
+const dur = s => s == null ? "–" : s < 90 ? Math.round(s) + "s" : s < 5400 ? Math.round(s / 60) + "m" : (s / 3600).toFixed(1) + "h";
+const short = m => m ? esc(m.slice(0, 4) + "…" + m.slice(-4)) : "";
 const cls = x => x == null ? "" : x > 0 ? "ok" : x < 0 ? "bad" : "";
+// one line, cut with an ellipsis; the full text on long press (title)
+const one = (t, c = "") => t ? `<span class="one ${c}" title="${esc(t)}">${esc(t)}</span>` : "";
 
 // Served from GitHub Pages (permanent address): the data API lives on the owner's PC behind a tunnel
 // whose address changes; the bot keeps it in tunnel.json of this repo. Served from the tunnel: same origin.
@@ -92,66 +110,78 @@ function nav() {
     `<button class="${k === tab ? "on" : ""}" onclick="tab='${k}';render()">${t}</button>`).join("");
 }
 
+function pipeline() {
+  const P = S.pipeline || {steps: []};
+  const steps = P.steps.map((s, i) => {
+    const c = s.running ? "run" : s.done ? "done" : "";
+    const pr = s.progress;
+    const bar = pr && pr.pct != null ? `<div class="bar"><i style="width:${pr.pct}%"></i></div>` : "";
+    return `<div class="step ${c}"><span class="n">${s.done && !s.running ? "✓" : i + 1}</span><div class="main">
+      <span class="one t">${esc(s.title)} ${s.running ? '<span class="pill ok">running</span>' : ""}</span>
+      ${one(s.detail, "mut small")}${bar}${pr ? one(pr.text, "mut small") : ""}</div></div>`;
+  }).join("");
+  const head = `autopilot <span class="${P.live ? "ok" : "bad"}">${P.live ? "live" : "not running"}</span>` +
+               (P.next_discover_s ? ` · next search ${dur(P.next_discover_s)}` : "");
+  return `<div class="card"><h3>Pipeline <span class="sub">· ${head}</span></h3>${steps}</div>`;
+}
+
+function runCard(r, title, hint) {
+  if (!r) return `<div class="card"><h3>${title} <span class="sub">· ${hint}</span></h3><span class="mut small">not started yet</span></div>`;
+  return `<div class="card"><h3>${title} <span class="sub">· running ${dur(Date.now() / 1000 - r.since)}</span></h3><div class="grid">
+    <div class="kpi"><b class="${cls(r.pnl_sol)}">${sol(r.pnl_sol)}</b><span>PnL SOL</span></div>
+    <div class="kpi"><b>${r.closed}</b><span>closed</span></div>
+    <div class="kpi"><b>${r.win_rate == null ? "–" : Math.round(r.win_rate * 100) + "%"}</b><span>win rate</span></div>
+    <div class="kpi"><b>${r.open}</b><span>open</span></div>
+    <div class="kpi"><b>${r.entries}</b><span>entries</span></div>
+    <div class="kpi"><b>${r.signals}</b><span>signals</span></div></div></div>`;
+}
+
 function home() {
-  const k = S.kpi || {};
-  const risk = S.risk.map(r => `<div class="row"><span>${esc(r.key.slice(11) || "paper")}</span>
-     <span class="${r.halted ? "bad" : "ok"}">${r.halted ? "HALT " + esc(r.halted) : "ok"} · ${sol(r.day_pnl)} · ${r.day_trades ?? 0}t</span></div>
-     `).join("");
-  const open = S.open.length ? S.open.map(p => `<div class="row"><a href="https://gmgn.ai/sol/token/${esc(p.mint)}">${short(p.mint)}</a>
-     <span class="mut">${esc(p.src || "")} · ${ago(Date.now() / 1000 - p.age_s)}</span></div>`).join("") : `<p class="mut">none</p>`;
-  return `<div class="card"><h3>Kill switch</h3><div class="row"><span class="${S.kill ? "bad" : "ok"}">${S.kill ? "ON: entries blocked" : "off"}</span>
-      <button class="act ${S.kill ? "" : "danger"}" onclick='action({action:"kill_toggle"},"${S.kill ? "Turn kill switch OFF?" : "Block all new entries?"}")'>${S.kill ? "Turn off" : "Turn on"}</button></div></div>
-    <div class="card"><h3>${esc(k.run || "No paper run yet")}</h3><div class="grid">
-      <div class="kpi"><b class="${cls(k.pnl_sol)}">${sol(k.pnl_sol)}</b><span>PnL SOL</span></div>
-      <div class="kpi"><b>${k.closed ?? 0}</b><span>closed</span></div>
-      <div class="kpi"><b>${k.win_rate == null ? "–" : Math.round(k.win_rate * 100) + "%"}</b><span>win rate</span></div>
-      <div class="kpi"><b class="${cls(k.without_top3)}">${sol(k.without_top3)}</b><span>w/o top 3</span></div>
-      <div class="kpi"><b class="ok">${sol(k.best)}</b><span>best</span></div>
-      <div class="kpi"><b class="bad">${sol(k.worst)}</b><span>worst</span></div></div>
-      ${k.within_limits_n != null && k.within_limits_n !== k.closed ? `<p class="mut">within live limits: ${k.within_limits_n} trades · ${sol(k.within_limits_pnl)} SOL</p>` : ""}</div>
+  const R = S.runs || {};
+  const halted = S.risk.filter(r => r.halted);
+  const open = S.open.length ? S.open.map(p => `<div class="row"><span class="main">
+       <a class="mono" href="https://gmgn.ai/sol/token/${esc(p.mint)}">${short(p.mint)}</a>
+       <span class="mut small"> · ${esc(p.src || "")}</span></span><span class="side mut small">${dur(p.age_s)}</span></div>`).join("")
+     : `<span class="mut small">none</span>`;
+  return `<div class="card"><div class="row"><span class="main"><span class="one">Kill switch
+        <span class="pill ${S.kill ? "bad" : "ok"}">${S.kill ? "ON: entries blocked" : "off"}</span></span></span>
+      <span class="side"><button class="act ${S.kill ? "" : "danger"}" onclick='action({action:"kill_toggle"},"${S.kill ? "Turn kill switch OFF?" : "Block all new entries?"}")'>${S.kill ? "Turn off" : "Stop entries"}</button></span></div></div>
+    ${halted.length ? `<div class="card"><h3>Risk halts</h3>${halted.map(r => `<div class="row"><span class="main">${one(r.key.slice(11) || "paper")}</span><span class="side bad">${esc(r.halted)}</span></div>`).join("")}</div>` : ""}
+    ${pipeline()}
+    ${runCard(R.followed, "Followed wallets", "passed the filter")}
+    ${runCard(R.probe, "Probe", "best rejected, for comparison")}
     <div class="card"><h3>Open positions</h3>${open}</div>
-    ${risk ? `<div class="card"><h3>Risk (survives restarts)</h3>${risk}</div>` : ""}
-    <div class="card"><div class="row"><span>Telegram alerts</span>
-      <span class="mut">${S.alerts ? "on" : "off"}</span></div>
-      <div class="row"><span class="mut">mode ${esc(S.mode)} · updated</span><span class="mut">${ago(S.ts)} ago</span></div></div>`;
+    <div class="card"><h3>Autopilot</h3>${(S.events || []).map(e => `<div class="row"><span class="main">${one(e.what)}</span>
+       <span class="side mut small">${ago(e.ts)}</span></div>`).join("") || '<span class="mut small">no events</span>'}</div>`;
 }
 
 function trades() {
   const icon = {enter: "🟢", exit: "⚪", partial_exit: "◐", skip: "·", halt: "⛔"};
-  return `<div class="card"><h3>Decisions (latest 40)</h3>` + S.decisions.map(d => `<div class="row">
-     <span>${icon[d.action] || "•"} <b>${esc(d.action)}</b> <span class="mut">${esc(d.reason || "")}</span><br>
-       <span class="mono">${d.mint ? `<a href="https://gmgn.ai/sol/token/${esc(d.mint)}">${short(d.mint)}</a>` : ""} ${d.wallet ? "· " + short(d.wallet) : ""}</span></span>
-     <span style="text-align:right">${d.pnl_sol != null ? `<b class="${cls(d.pnl_sol)}">${sol(d.pnl_sol)}</b><br>` : ""}
-       <span class="mut">${d.roi != null ? pct(d.roi) + " · " : ""}${ago(d.ts)}</span></span></div>`).join("") + `</div>`;
+  const rows = S.decisions.filter(d => d.run && d.run.startsWith("paper") && d.reason !== "already_open");
+  return `<div class="card"><h3>Trades <span class="sub">· latest</span></h3>` + (rows.map(d => `<div class="row">
+     <span class="main"><span class="one">${icon[d.action] || "•"} <b>${esc(d.action)}</b> <span class="mut">${esc(d.reason || "")}</span></span>
+       <span class="one mono mut">${d.run.startsWith("paper-probe") ? "probe" : "followed"}${d.mint ? ` · <a href="https://gmgn.ai/sol/token/${esc(d.mint)}">${short(d.mint)}</a>` : ""}</span></span>
+     <span class="side">${d.pnl_sol != null ? `<b class="${cls(d.pnl_sol)}">${sol(d.pnl_sol)}</b><br>` : ""}
+       <span class="mut small">${d.roi != null ? pct(d.roi) + " · " : ""}${ago(d.ts)}</span></span></div>`).join("")
+     || '<span class="mut small">no trades yet</span>') + `</div>`;
 }
 
 function feeds() {
-  const prov = S.providers.map(p => `<div class="row"><span>${esc(p.name)}${p.public ? " <span class='mut'>pub</span>" : ""}</span>
-     <span class="${p.score && p.score.split("/")[0] === p.score.split("/")[1] ? "ok" : p.score ? "bad" : "mut"}">${esc(p.score || "–")} · ws ${esc(p.ws || "–")}<br><span class="mut">${p.today}${p.budget ? " / " + p.budget : " · unmetered"}</span></span></div>`).join("");
-  const fd = S.feeds.map(f => `<div class="row"><span>${esc(f.feed)}<br><span class="mut mono">${esc(f.ok ? (f.note || "") : (f.error || ""))}</span></span>
-     <span class="${f.ok ? "ok" : "bad"}">${f.ok ? "ok" : "error"}<br><span class="mut">${ago(f.last_ok_ts)}</span></span></div>`).join("");
-  return `<div class="card"><h3>RPC providers · checked ${ago(S.providers_checked)} ago</h3>${prov}</div>
-     <div class="card"><h3>Data feeds</h3>${fd || "<p class='mut'>none yet</p>"}</div>`;
-}
-
-function bar(p) {
-  if (!p || p.stage === "done") return "";
-  const pct = p.total ? Math.min(100, Math.round(100 * p.done / p.total)) : 0;
-  return `<div class="mut" style="margin-top:6px">${esc(p.stage)} · ${p.done}/${p.total}${p.eta_s != null ? " · ~" + Math.ceil(p.eta_s / 60) + " min left" : ""}</div>
-    <div style="height:6px;background:var(--bg);border-radius:3px;margin-top:4px"><div style="height:6px;width:${pct}%;background:var(--acc);border-radius:3px"></div></div>`;
-}
-function jobs() {
-  const prog = Object.entries(S.progress || {}).filter(([k, p]) => p.stage !== "done" && Date.now() / 1000 - p.ts < 600)
-    .map(([k, p]) => `<div class="card"><b>${esc(k)}</b>${bar(p)}</div>`).join("");
-  return prog + S.jobs.map(j => `<div class="card"><div class="row"><span><b>${esc(j.title)}</b><br>
-     <span class="${j.running ? "ok" : "mut"}">${j.running ? "running" : j.code == null ? "idle" : "exited " + j.code}</span></span></div>
-     ${j.tail ? `<pre>${esc(j.tail)}</pre>` : ""}</div>`).join("");
+  const prov = S.providers.map(p => `<div class="row"><span class="main"><span class="one"><span class="dot ${p.state}"></span>${esc(p.name)}
+       ${p.public ? "<span class='mut small'>public</span>" : ""}${p.via_proxy ? " <span class='mut small'>via proxy</span>" : ""}</span>
+       ${p.error ? one(p.error, (p.state === "bad" ? "bad" : "warn") + " small") : ""}</span>
+     <span class="side small">${p.today.toLocaleString()}${p.budget ? `<span class="mut"> / ${p.budget.toLocaleString()}</span>` : ""}</span></div>`).join("");
+  const fd = S.feeds.map(f => `<div class="row"><span class="main"><span class="one"><span class="dot ${f.state}"></span>${esc(f.feed)}</span>
+       ${f.error ? one(f.error, (f.ok ? "warn" : "bad") + " small") : one(f.note, "mut small")}</span>
+     <span class="side mut small">${ago(f.last_ok_ts)}</span></div>`).join("");
+  return `<div class="card"><h3>Data feeds</h3>${fd || "<span class='mut small'>none yet</span>"}</div>
+     <div class="card"><h3>RPC providers <span class="sub">· calls today</span></h3>${prov}</div>`;
 }
 
 function render() {
   nav();
   if (!S) return;
-  document.getElementById("view").innerHTML = ({home, trades, feeds, jobs})[tab]();
+  document.getElementById("view").innerHTML = ({home, trades, feeds})[tab]();
 }
 nav(); refresh(); setInterval(refresh, 5000);
 </script>
