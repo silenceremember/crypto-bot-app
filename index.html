@@ -96,7 +96,7 @@ function home() {
   const k = S.kpi || {};
   const risk = S.risk.map(r => `<div class="row"><span>${esc(r.key.slice(11) || "paper")}</span>
      <span class="${r.halted ? "bad" : "ok"}">${r.halted ? "HALT " + esc(r.halted) : "ok"} · ${sol(r.day_pnl)} · ${r.day_trades ?? 0}t</span></div>
-     ${r.halted ? `<button class="act danger" onclick='action({action:"risk_reset",key:${JSON.stringify(r.key)}},"Clear this halt?")'>Reset halt</button>` : ""}`).join("");
+     `).join("");
   const open = S.open.length ? S.open.map(p => `<div class="row"><a href="https://gmgn.ai/sol/token/${esc(p.mint)}">${short(p.mint)}</a>
      <span class="mut">${esc(p.src || "")} · ${ago(Date.now() / 1000 - p.age_s)}</span></div>`).join("") : `<p class="mut">none</p>`;
   return `<div class="card"><h3>Kill switch</h3><div class="row"><span class="${S.kill ? "bad" : "ok"}">${S.kill ? "ON: entries blocked" : "off"}</span>
@@ -111,7 +111,7 @@ function home() {
     <div class="card"><h3>Open positions</h3>${open}</div>
     ${risk ? `<div class="card"><h3>Risk (survives restarts)</h3>${risk}</div>` : ""}
     <div class="card"><div class="row"><span>Telegram alerts</span>
-      <button class="ghost" onclick='action({action:"alerts_toggle"})'>${S.alerts ? "on" : "off"}</button></div>
+      <span class="mut">${S.alerts ? "on" : "off"}</span></div>
       <div class="row"><span class="mut">mode ${esc(S.mode)} · updated</span><span class="mut">${ago(S.ts)} ago</span></div></div>`;
 }
 
@@ -126,19 +126,16 @@ function trades() {
 
 function feeds() {
   const prov = S.providers.map(p => `<div class="row"><span>${esc(p.name)}${p.public ? " <span class='mut'>pub</span>" : ""}</span>
-     <span class="${p.score && p.score.split("/")[0] === p.score.split("/")[1] ? "ok" : p.score ? "bad" : "mut"}">${esc(p.score || "–")} · ws ${esc(p.ws || "–")}</span></div>`).join("");
+     <span class="${p.score && p.score.split("/")[0] === p.score.split("/")[1] ? "ok" : p.score ? "bad" : "mut"}">${esc(p.score || "–")} · ws ${esc(p.ws || "–")}<br><span class="mut">${p.today}${p.budget ? " / " + p.budget : " · unmetered"}</span></span></div>`).join("");
   const fd = S.feeds.map(f => `<div class="row"><span>${esc(f.feed)}<br><span class="mut mono">${esc(f.ok ? (f.note || "") : (f.error || ""))}</span></span>
      <span class="${f.ok ? "ok" : "bad"}">${f.ok ? "ok" : "error"}<br><span class="mut">${ago(f.last_ok_ts)}</span></span></div>`).join("");
-  return `<div class="card"><h3>RPC providers · checked ${ago(S.providers_checked)} ago</h3>${prov}
-     <button class="act" style="margin-top:8px" onclick='action({action:"job_start",name:"rpc_check"})'>Run check</button></div>
+  return `<div class="card"><h3>RPC providers · checked ${ago(S.providers_checked)} ago</h3>${prov}</div>
      <div class="card"><h3>Data feeds</h3>${fd || "<p class='mut'>none yet</p>"}</div>`;
 }
 
 function jobs() {
   return S.jobs.map(j => `<div class="card"><div class="row"><span><b>${esc(j.title)}</b><br>
-     <span class="${j.running ? "ok" : "mut"}">${j.running ? "running" : j.code == null ? "idle" : "exited " + j.code}</span></span>
-     ${j.running ? `<button class="act danger" onclick='action({action:"job_stop",name:"${esc(j.name)}"},"Stop ${esc(j.title)}?")'>Stop</button>`
-                 : `<button class="act" onclick='action({action:"job_start",name:"${esc(j.name)}"})'>Start</button>`}</div>
+     <span class="${j.running ? "ok" : "mut"}">${j.running ? "running" : j.code == null ? "idle" : "exited " + j.code}</span></span></div>
      ${j.tail ? `<pre>${esc(j.tail)}</pre>` : ""}</div>`).join("");
 }
 
