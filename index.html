@@ -144,13 +144,13 @@ function results() {
     const roi = g.invested ? g.pnl_sol / g.invested : null;
     return `<div class="row"><span class="main"><span class="one">${k === "total" ? "<b>Total</b>" : esc(g.title)}
         <span class="mut small"> · ${g.closed} closed · win ${g.win_rate == null ? "–" : Math.round(g.win_rate * 100) + "%"} · open ${g.open}</span></span>
-        <span class="one mut small">w/o best ${sol(g.pnl_ex_best)} · best ${sol(g.best)}</span>
+        <span class="one mut small">w/o best ${sol(g.pnl_ex_best)} · best ${sol(g.best)}${g.at_stake && g.at_stake.n ? ` · at ${g.at_stake.stake} SOL <b class="${cls(g.at_stake.pnl_sol)}">${sol(g.at_stake.pnl_sol)}</b>` : ""}</span>
         ${l ? `<span class="one small">last: <a class="mono" href="https://gmgn.ai/sol/token/${esc(l.mint)}">${short(l.mint)}</a>
           <b class="${cls(l.pnl_sol)}">${sol(l.pnl_sol)}</b> <span class="mut">${esc(l.reason)} · ${ago(l.ts)}</span></span>` : ""}</span>
       <span class="side"><b class="${cls(g.pnl_sol)}" style="font-size:16px">${g.closed ? sol(g.pnl_sol) : "–"}</b><br>
         <span class="small ${cls(roi)}">${roi == null ? "" : pct(roi)}</span></span></div>`;
   };
-  return `<div class="card"><h3>Results <span class="sub">· SOL, all runs, fees included</span></h3>${["total", "followed", "probe", "watch", "followed_trailing", "probe_trailing"].filter(k => R[k]).map(row).join("")}</div>`;
+  return `<div class="card"><h3>Results <span class="sub">· SOL, all runs, fees included</span></h3>${["total", "followed", "probe", "watch", "followed_trailing", "probe_trailing", "followed_filtered", "probe_filtered"].filter(k => R[k]).map(row).join("")}</div>`;
 }
 
 function home() {
