@@ -150,7 +150,7 @@ function results() {
       <span class="side"><b class="${cls(g.pnl_sol)}" style="font-size:16px">${g.closed ? sol(g.pnl_sol) : "–"}</b><br>
         <span class="small ${cls(roi)}">${roi == null ? "" : pct(roi)}</span></span></div>`;
   };
-  return `<div class="card"><h3>Results <span class="sub">· SOL, all runs, fees included</span></h3>${["total", "followed", "probe", "followed_trailing", "probe_trailing"].filter(k => R[k]).map(row).join("")}</div>`;
+  return `<div class="card"><h3>Results <span class="sub">· SOL, all runs, fees included</span></h3>${["total", "followed", "probe", "watch", "followed_trailing", "probe_trailing"].filter(k => R[k]).map(row).join("")}</div>`;
 }
 
 function home() {
@@ -176,7 +176,7 @@ function trades() {
   const rows = S.decisions.filter(d => d.run && d.run.startsWith("paper") && d.reason !== "already_open");
   return `<div class="card"><h3>Trades <span class="sub">· latest</span></h3>` + (rows.map(d => `<div class="row">
      <span class="main"><span class="one">${icon[d.action] || "•"} <b>${esc(d.action)}</b> <span class="mut">${esc(d.reason || "")}</span></span>
-       <span class="one mono mut">${d.run.startsWith("paper-probe") ? "probe" : "followed"}${d.mint ? ` · <a href="https://gmgn.ai/sol/token/${esc(d.mint)}">${short(d.mint)}</a>` : ""}</span></span>
+       <span class="one mono mut">${d.run.startsWith("paper-probe") ? "probe" : d.run.startsWith("paper-watch") ? "watch" : "followed"}${d.mint ? ` · <a href="https://gmgn.ai/sol/token/${esc(d.mint)}">${short(d.mint)}</a>` : ""}</span></span>
      <span class="side">${d.pnl_sol != null ? `<b class="${cls(d.pnl_sol)}">${sol(d.pnl_sol)}</b><br>` : ""}
        <span class="mut small">${d.roi != null ? pct(d.roi) + " · " : ""}${ago(d.ts)}</span></span></div>`).join("")
      || '<span class="mut small">no trades yet</span>') + `</div>`;
