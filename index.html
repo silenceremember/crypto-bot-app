@@ -107,7 +107,8 @@ function home() {
       <div class="kpi"><b>${k.win_rate == null ? "–" : Math.round(k.win_rate * 100) + "%"}</b><span>win rate</span></div>
       <div class="kpi"><b class="${cls(k.without_top3)}">${sol(k.without_top3)}</b><span>w/o top 3</span></div>
       <div class="kpi"><b class="ok">${sol(k.best)}</b><span>best</span></div>
-      <div class="kpi"><b class="bad">${sol(k.worst)}</b><span>worst</span></div></div></div>
+      <div class="kpi"><b class="bad">${sol(k.worst)}</b><span>worst</span></div></div>
+      ${k.within_limits_n != null && k.within_limits_n !== k.closed ? `<p class="mut">within live limits: ${k.within_limits_n} trades · ${sol(k.within_limits_pnl)} SOL</p>` : ""}</div>
     <div class="card"><h3>Open positions</h3>${open}</div>
     ${risk ? `<div class="card"><h3>Risk (survives restarts)</h3>${risk}</div>` : ""}
     <div class="card"><div class="row"><span>Telegram alerts</span>
