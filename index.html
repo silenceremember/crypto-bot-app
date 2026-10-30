@@ -134,8 +134,16 @@ function feeds() {
      <div class="card"><h3>Data feeds</h3>${fd || "<p class='mut'>none yet</p>"}</div>`;
 }
 
+function bar(p) {
+  if (!p || p.stage === "done") return "";
+  const pct = p.total ? Math.min(100, Math.round(100 * p.done / p.total)) : 0;
+  return `<div class="mut" style="margin-top:6px">${esc(p.stage)} · ${p.done}/${p.total}${p.eta_s != null ? " · ~" + Math.ceil(p.eta_s / 60) + " min left" : ""}</div>
+    <div style="height:6px;background:var(--bg);border-radius:3px;margin-top:4px"><div style="height:6px;width:${pct}%;background:var(--acc);border-radius:3px"></div></div>`;
+}
 function jobs() {
-  return S.jobs.map(j => `<div class="card"><div class="row"><span><b>${esc(j.title)}</b><br>
+  const prog = Object.entries(S.progress || {}).filter(([k, p]) => p.stage !== "done" && Date.now() / 1000 - p.ts < 600)
+    .map(([k, p]) => `<div class="card"><b>${esc(k)}</b>${bar(p)}</div>`).join("");
+  return prog + S.jobs.map(j => `<div class="card"><div class="row"><span><b>${esc(j.title)}</b><br>
      <span class="${j.running ? "ok" : "mut"}">${j.running ? "running" : j.code == null ? "idle" : "exited " + j.code}</span></span></div>
      ${j.tail ? `<pre>${esc(j.tail)}</pre>` : ""}</div>`).join("");
 }
