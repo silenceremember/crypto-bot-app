@@ -125,6 +125,14 @@ function pipeline() {
   return `<div class="card"><h3>Pipeline <span class="sub">· ${head}</span></h3>${steps}</div>`;
 }
 
+function reviews() {
+  const R = S.reviews || [];
+  if (!R.length) return "";
+  return `<div class="card"><h3>Data for reviews <span class="sub">· until each method can be judged</span></h3>` + R.map(r =>
+    `<div class="step ${r.pct >= 100 ? "done" : ""}"><span class="n">${r.pct >= 100 ? "✓" : "…"}</span><div class="main">
+      <span class="one t">${esc(r.title)}</span><div class="bar"><i style="width:${r.pct}%"></i></div>${one(r.text, "mut small")}</div></div>`).join("") + `</div>`;
+}
+
 function runCard(r, title, hint) {
   if (!r) return `<div class="card"><h3>${title} <span class="sub">· ${hint}</span></h3><span class="mut small">not started yet</span></div>`;
   return `<div class="card"><h3>${title} <span class="sub">· running ${dur(Date.now() / 1000 - r.since)}</span></h3><div class="grid">
@@ -169,6 +177,7 @@ function home() {
     ${halted.length ? `<div class="card"><h3>Live limits hit <span class="sub">· paper keeps trading</span></h3>${halted.map(r => `<div class="row"><span class="main">${one(r.key.slice(11) || "paper")}</span><span class="side warn">${esc(r.halted)}</span></div>`).join("")}</div>` : ""}
     ${results()}
     ${pipeline()}
+    ${reviews()}
     <div class="card"><h3>Open positions</h3>${open}</div>
     <div class="card"><h3>Autopilot</h3>${(S.events || []).map(e => `<div class="row"><span class="main">${one(e.what)}</span>
        <span class="side mut small">${ago(e.ts)}</span></div>`).join("") || '<span class="mut small">no events</span>'}</div>`;
