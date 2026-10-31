@@ -37,6 +37,13 @@ background:var(--bg);color:var(--mut)}
 .step .main{flex:1;min-width:0}.step .t{font-weight:600}
 .bar{height:6px;background:var(--bg);border-radius:3px;margin:5px 0 3px;overflow:hidden}
 .bar>i{display:block;height:100%;background:var(--acc);border-radius:3px}
+.rv-sec{font-size:11px;font-weight:700;color:var(--mut);margin:10px 0 2px;text-transform:uppercase;letter-spacing:.04em}
+.rv{padding:7px 0 7px 10px;border-left:3px solid var(--bg);margin:3px 0}.rv .t{font-weight:600;min-width:0}
+.rv-head{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.rv-collecting{border-left-color:var(--acc)}.rv-due{border-left-color:var(--warn)}.rv-due .bar>i{background:var(--warn)}
+.rv-pass{border-left-color:var(--ok)}.rv-pass .bar>i{background:var(--ok)}
+.rv-fail{border-left-color:var(--bad)}.rv-fail .bar>i{background:var(--bad)}
+.pill.warn{color:var(--warn)}
 .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;background:var(--bg);color:var(--mut)}
 .pill.ok{color:var(--ok)}.pill.bad{color:#fff;background:var(--bad)}
 button.act{border:0;border-radius:10px;padding:7px 12px;background:var(--acc);color:var(--accfg);font:inherit;font-weight:600;font-size:13px}
@@ -128,12 +135,18 @@ function pipeline() {
   return `<div class="card"><h3>Pipeline <span class="sub">· ${head}</span></h3>${steps}</div>`;
 }
 
+const SECTIONS = [["live", "Live strategies"], ["rules", "Frozen rules"], ["studies", "Studies waiting for data"], ["checks", "Checks"]];
+const STATUS = {collecting: "collecting", due: "review due", pass: "pass", fail: "fail"};
 function reviews() {
   const R = S.reviews || [];
   if (!R.length) return "";
-  return `<div class="card"><h3>Data for reviews <span class="sub">· until each method can be judged</span></h3>` + R.map(r =>
-    `<div class="step ${r.pct >= 100 ? "done" : ""}"><span class="n">${r.pct >= 100 ? "✓" : "…"}</span><div class="main">
-      <span class="one t">${esc(r.title)}</span><div class="bar"><i style="width:${r.pct}%"></i></div>${one(r.text, "mut small")}</div></div>`).join("") + `</div>`;
+  return `<div class="card"><h3>Data for reviews</h3>` + SECTIONS.map(([k, name]) => {
+    const rows = R.filter(r => r.section === k);
+    return rows.length ? `<div class="rv-sec">${name}</div>` + rows.map(r =>
+      `<div class="rv rv-${r.status}"><div class="rv-head"><span class="one t">${esc(r.title)}</span>
+        <span class="pill ${r.status === "pass" ? "ok" : r.status === "fail" ? "bad" : r.status === "due" ? "warn" : ""}">${STATUS[r.status]}</span></div>
+        <div class="bar"><i style="width:${r.pct}%"></i></div><div class="mut small">${esc(r.text)}</div></div>`).join("") : "";
+  }).join("") + `</div>`;
 }
 
 function server() {
@@ -142,15 +155,6 @@ function server() {
   return `<div class="card"><h3>Server <span class="sub">· a full bar is a problem</span></h3>` + R.map(r =>
     `<div class="step"><span class="n">·</span><div class="main">
       <span class="one t">${esc(r.title)}</span><div class="bar"><i style="width:${r.pct}%"></i></div>${one(r.text, "mut small")}</div></div>`).join("") + `</div>`;
-}
-
-function experiments() {
-  const R = S.experiments || [];
-  if (!R.length) return "";
-  return `<div class="card"><h3>Experiments <span class="sub">· frozen rules, later trades only</span></h3>` + R.map(e =>
-    `<div class="row"><span class="main"><span class="one">${esc(e.title)}</span><span class="mut small">${e.n} trades · ${e.mints} tokens`
-    + (e.mean != null ? ` · ${(e.mean * 100).toFixed(1)}% ± ${(196 * e.se).toFixed(1)}` : "") + `</span></span>
-      <span class="side"><b class="${cls(e.pnl)}">${sol(e.pnl)}</b><span class="mut small">${esc(e.verdict)}</span></span></div>`).join("") + `</div>`;
 }
 
 function runCard(r, title, hint) {
@@ -198,7 +202,6 @@ function home() {
     ${results()}
     ${pipeline()}
     ${reviews()}
-    ${experiments()}
     ${server()}
     <div class="card"><h3>Open positions</h3>${open}</div>
     <div class="card"><h3>Autopilot</h3>${(S.events || []).map(e => `<div class="row"><span class="main">${one(e.what)}</span>
