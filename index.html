@@ -95,8 +95,11 @@ async function api(path, body, retried) {
 }
 function showErr(e) { const b = document.getElementById("err"); b.style.display = e ? "block" : "none"; b.textContent = e || ""; }
 
+let busy = false;     // one poll at a time: a slow answer must not stack the next ones behind it
 async function refresh() {
-  try { S = await api("/api/state"); showErr(""); render(); } catch (e) { showErr(e.message); }
+  if (busy) return;
+  busy = true;
+  try { S = await api("/api/state"); showErr(""); render(); } catch (e) { showErr(e.message); } finally { busy = false; }
 }
 const ask = t => new Promise(r => tg && tg.showConfirm ? tg.showConfirm(t, r) : r(confirm(t)));
 async function action(body, confirmText) {
