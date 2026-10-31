@@ -129,7 +129,15 @@ function reviews() {
   const R = S.reviews || [];
   if (!R.length) return "";
   return `<div class="card"><h3>Data for reviews <span class="sub">· until each method can be judged</span></h3>` + R.map(r =>
-    `<div class="step ${r.pct >= 100 && !r.gauge ? "done" : ""}"><span class="n">${r.gauge ? "·" : r.pct >= 100 ? "✓" : "…"}</span><div class="main">
+    `<div class="step ${r.pct >= 100 ? "done" : ""}"><span class="n">${r.pct >= 100 ? "✓" : "…"}</span><div class="main">
+      <span class="one t">${esc(r.title)}</span><div class="bar"><i style="width:${r.pct}%"></i></div>${one(r.text, "mut small")}</div></div>`).join("") + `</div>`;
+}
+
+function server() {
+  const R = S.server || [];
+  if (!R.length) return "";
+  return `<div class="card"><h3>Server <span class="sub">· a full bar is a problem</span></h3>` + R.map(r =>
+    `<div class="step"><span class="n">·</span><div class="main">
       <span class="one t">${esc(r.title)}</span><div class="bar"><i style="width:${r.pct}%"></i></div>${one(r.text, "mut small")}</div></div>`).join("") + `</div>`;
 }
 
@@ -178,6 +186,7 @@ function home() {
     ${results()}
     ${pipeline()}
     ${reviews()}
+    ${server()}
     <div class="card"><h3>Open positions</h3>${open}</div>
     <div class="card"><h3>Autopilot</h3>${(S.events || []).map(e => `<div class="row"><span class="main">${one(e.what)}</span>
        <span class="side mut small">${ago(e.ts)}</span></div>`).join("") || '<span class="mut small">no events</span>'}</div>`;
