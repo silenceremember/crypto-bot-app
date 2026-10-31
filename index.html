@@ -129,7 +129,7 @@ function reviews() {
   const R = S.reviews || [];
   if (!R.length) return "";
   return `<div class="card"><h3>Data for reviews <span class="sub">· until each method can be judged</span></h3>` + R.map(r =>
-    `<div class="step ${r.pct >= 100 ? "done" : ""}"><span class="n">${r.pct >= 100 ? "✓" : "…"}</span><div class="main">
+    `<div class="step ${r.pct >= 100 && !r.gauge ? "done" : ""}"><span class="n">${r.gauge ? "·" : r.pct >= 100 ? "✓" : "…"}</span><div class="main">
       <span class="one t">${esc(r.title)}</span><div class="bar"><i style="width:${r.pct}%"></i></div>${one(r.text, "mut small")}</div></div>`).join("") + `</div>`;
 }
 
