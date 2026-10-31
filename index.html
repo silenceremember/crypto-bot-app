@@ -188,7 +188,7 @@ function trades() {
   const rows = S.decisions.filter(d => d.run && d.run.startsWith("paper") && d.reason !== "already_open");
   return `<div class="card"><h3>Trades <span class="sub">· latest</span></h3>` + (rows.map(d => `<div class="row">
      <span class="main"><span class="one">${icon[d.action] || "•"} <b>${esc(d.action)}</b> <span class="mut">${esc(d.reason || "")}</span></span>
-       <span class="one mono mut">${d.run.startsWith("paper-probe") ? "probe" : d.run.startsWith("paper-watch") ? "watch" : d.run.startsWith("paper-rep") ? "rep" : "followed"}${d.mint ? ` · <a href="https://gmgn.ai/sol/token/${esc(d.mint)}">${short(d.mint)}</a>` : ""}</span></span>
+       <span class="one mono mut">${d.run.startsWith("paper-probe") ? "probe" : d.run.startsWith("paper-watch") ? "watch" : d.run.startsWith("paper-repfix") ? "repfix" : d.run.startsWith("paper-rep") ? "rep" : "followed"}${d.mint ? ` · <a href="https://gmgn.ai/sol/token/${esc(d.mint)}">${short(d.mint)}</a>` : ""}</span></span>
      <span class="side">${d.pnl_sol != null ? `<b class="${cls(d.pnl_sol)}">${sol(d.pnl_sol)}</b><br>` : ""}
        <span class="mut small">${d.roi != null ? pct(d.roi) + " · " : ""}${ago(d.ts)}</span></span></div>`).join("")
      || '<span class="mut small">no trades yet</span>') + `</div>`;
