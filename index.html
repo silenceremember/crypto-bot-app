@@ -144,6 +144,15 @@ function server() {
       <span class="one t">${esc(r.title)}</span><div class="bar"><i style="width:${r.pct}%"></i></div>${one(r.text, "mut small")}</div></div>`).join("") + `</div>`;
 }
 
+function experiments() {
+  const R = S.experiments || [];
+  if (!R.length) return "";
+  return `<div class="card"><h3>Experiments <span class="sub">· frozen rules, later trades only</span></h3>` + R.map(e =>
+    `<div class="row"><span class="main"><span class="one">${esc(e.title)}</span><span class="mut small">${e.n} trades · ${e.mints} tokens`
+    + (e.mean != null ? ` · ${(e.mean * 100).toFixed(1)}% ± ${(196 * e.se).toFixed(1)}` : "") + `</span></span>
+      <span class="side"><b class="${cls(e.pnl)}">${sol(e.pnl)}</b><span class="mut small">${esc(e.verdict)}</span></span></div>`).join("") + `</div>`;
+}
+
 function runCard(r, title, hint) {
   if (!r) return `<div class="card"><h3>${title} <span class="sub">· ${hint}</span></h3><span class="mut small">not started yet</span></div>`;
   return `<div class="card"><h3>${title} <span class="sub">· running ${dur(Date.now() / 1000 - r.since)}</span></h3><div class="grid">
@@ -189,6 +198,7 @@ function home() {
     ${results()}
     ${pipeline()}
     ${reviews()}
+    ${experiments()}
     ${server()}
     <div class="card"><h3>Open positions</h3>${open}</div>
     <div class="card"><h3>Autopilot</h3>${(S.events || []).map(e => `<div class="row"><span class="main">${one(e.what)}</span>
@@ -200,7 +210,7 @@ function trades() {
   const rows = S.decisions.filter(d => d.run && d.run.startsWith("paper") && d.reason !== "already_open");
   return `<div class="card"><h3>Trades <span class="sub">· latest</span></h3>` + (rows.map(d => `<div class="row">
      <span class="main"><span class="one">${icon[d.action] || "•"} <b>${esc(d.action)}</b> <span class="mut">${esc(d.reason || "")}</span></span>
-       <span class="one mono mut">${d.run.startsWith("paper-probe") ? "probe" : d.run.startsWith("paper-watch") ? "watch" : d.run.startsWith("paper-filt") ? "filt" : d.run.startsWith("paper-repfix") ? "repfix" : d.run.startsWith("paper-rep") ? "rep" : "followed"}${d.mint ? ` · <a href="https://gmgn.ai/sol/token/${esc(d.mint)}">${short(d.mint)}</a>` : ""}</span></span>
+       <span class="one mono mut">${d.run.startsWith("paper-probe") ? "probe" : d.run.startsWith("paper-watch") ? "watch" : d.run.startsWith("paper-filt") ? "filt" : d.run.startsWith("paper-repfix") ? "repfix" : d.run.startsWith("paper-repv") ? "repv" : d.run.startsWith("paper-rep") ? "rep" : "followed"}${d.mint ? ` · <a href="https://gmgn.ai/sol/token/${esc(d.mint)}">${short(d.mint)}</a>` : ""}</span></span>
      <span class="side">${d.pnl_sol != null ? `<b class="${cls(d.pnl_sol)}">${sol(d.pnl_sol)}</b><br>` : ""}
        <span class="mut small">${d.roi != null ? pct(d.roi) + " · " : ""}${ago(d.ts)}</span></span></div>`).join("")
      || '<span class="mut small">no trades yet</span>') + `</div>`;
