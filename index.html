@@ -135,7 +135,7 @@ function pipeline() {
   return `<div class="card"><h3>Pipeline <span class="sub">· ${head}</span></h3>${steps}</div>`;
 }
 
-const SECTIONS = [["live", "Live strategies"], ["rules", "Frozen rules"], ["studies", "Studies waiting for data"], ["checks", "Checks"]];
+const SECTIONS = [["live", "Strategies"], ["rules", "Rules · frozen, judged on later trades"], ["studies", "Studies waiting for data"], ["checks", "Checks"]];
 const STATUS = {collecting: "collecting", due: "review due", pass: "pass", fail: "fail"};
 function reviews() {
   const R = S.reviews || [];
