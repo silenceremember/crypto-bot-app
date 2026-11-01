@@ -46,6 +46,16 @@ background:var(--bg);color:var(--mut)}
 .pill.warn{color:var(--warn)}
 .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;background:var(--bg);color:var(--mut)}
 .pill.ok{color:var(--ok)}.pill.bad{color:#fff;background:var(--bad)}
+.gauges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.gauges .pill{background:var(--card)}
+.st{padding:8px 0;border-top:1px solid var(--bg)}.st:first-of-type{border-top:0}
+.st-head{display:flex;align-items:baseline;gap:8px}.st-head .main{flex:1;min-width:0;font-weight:600}
+.st-head .side{flex:none;font-weight:700;font-size:15px}
+.rule{display:flex;align-items:center;gap:8px;padding:4px 0 4px 10px;border-left:3px solid var(--bg);margin:3px 0 0}
+.rule .main{flex:1;min-width:0}.rule .side{flex:none;text-align:right;white-space:nowrap}
+.rule-pass{border-left-color:var(--ok)}.rule-fail{border-left-color:var(--bad)}.rule-collecting{border-left-color:var(--acc)}
+.mini{display:inline-block;width:44px;height:5px;background:var(--bg);border-radius:3px;overflow:hidden;vertical-align:2px}
+.mini>i{display:block;height:100%;background:var(--acc)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}.chips .pill{font-weight:500}
 button.act{border:0;border-radius:10px;padding:7px 12px;background:var(--acc);color:var(--accfg);font:inherit;font-weight:600;font-size:13px}
 button.danger{background:var(--bad);color:#fff}
 a{color:var(--acc);text-decoration:none}
@@ -59,7 +69,7 @@ a{color:var(--acc);text-decoration:none}
 <script>
 const tg = window.Telegram && Telegram.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
-const TABS = [["home","Overview"],["trades","Trades"],["feeds","Data"]];
+const TABS = [["home","Overview"],["trades","Trades"],["feeds","System"]];
 let tab = "home", S = null;
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -135,99 +145,108 @@ function pipeline() {
   return `<div class="card"><h3>Pipeline <span class="sub">· ${head}</span></h3>${steps}</div>`;
 }
 
-const SECTIONS = [["live", "Strategies"], ["rules", "Rules · frozen, judged on later trades"], ["studies", "Studies waiting for data"], ["checks", "Checks"]];
-const STATUS = {collecting: "collecting", due: "review due", pass: "pass", fail: "fail"};
-function reviews() {
-  const R = S.reviews || [];
+const hhmm = t => t ? new Date(t * 1000).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit", hour12: false}) : "";
+const perTrade = (m, ci) => m == null ? "" : `<span class="${cls(m)}">${pct(m)}</span><span class="mut"> ±${(ci * 100).toFixed(1)}</span>`;
+// "fail: interval, top 1%" (a frozen rule) or "250 trades · mean ...: plus too small to prove" (the filter's proof)
+const failLabel = v => v.startsWith("fail") ? v.slice(0, 24) : v.split(":").pop().trim().slice(0, 24);
+const mini = p => `<span class="mini"><i style="width:${Math.min(100, p || 0).toFixed(0)}%"></i></span>`;
+
+// strategies with their frozen rules right under them (dashboard "Strategies and rules")
+function strategies() {
+  const L = S.strategies || [];
+  if (!L.length) return "";
+  const rows = L.map(s => {
+    const rules = s.rules.map(r => {
+      const state = r.status === "pass" ? '<span class="pill ok">pass</span>'
+        : r.need && (r.status !== "fail" || (r.tokens || 0) < r.need)
+          ? `${mini(100 * (r.tokens || 0) / r.need)} <span class="mut small">${r.tokens || 0}/${r.need}</span>`
+        : `<span class="pill bad" title="${esc(r.verdict)}">${esc(failLabel(String(r.verdict)))}</span>`;
+      return `<div class="rule rule-${r.status}"><span class="main">${one(r.title, "small")}
+          <span class="one mut small"><b class="${cls(r.pnl_sol)}">${sol(r.pnl_sol)}</b> · ${r.n} trades${r.mean != null ? " · " + perTrade(r.mean, r.ci) : ""}</span></span>
+        <span class="side">${state}</span></div>`;
+    }).join("");
+    return `<div class="st"><div class="st-head"><span class="main one">${esc(s.title)}</span>
+        <span class="side ${cls(s.pnl_sol)}">${sol(s.pnl_sol)}</span></div>
+      <div class="one mut small">since ${hhmm(s.since)} · ${s.closed} trades · ${s.tokens} tokens · win ${s.win_rate == null ? "–" : Math.round(s.win_rate * 100) + "%"}${s.open ? ` · <span style="color:var(--acc)">${s.open} open</span>` : ""}</div>
+      <div class="one small">${perTrade(s.mean, s.ci) || "–"}<span class="mut">/trade · −top1%</span> <span class="${cls(s.ex_top)}">${sol(s.ex_top)}</span>
+        <span class="mut">· −best</span> <span class="${cls(s.ex_wallet)}">${sol(s.ex_wallet)}</span>${s.sim != null ? ` <span class="mut">· sim ${pct(s.sim)}</span>` : ""}</div>
+      ${rules}</div>`;
+  }).join("");
+  return `<div class="card"><h3>Strategies and rules <span class="sub">· paper, fees incl.</span></h3>${rows}
+    <div class="mut small" style="margin-top:6px">±: 95% range. −top1% / −best: PnL without the top 1% of trades / the best wallet. Rules count trades after ${hhmm(S.froze)}; pass at ${S.need} tokens: range above 0 and both still positive.</div></div>`;
+}
+
+function studies() {
+  const R = S.studies || [];
   if (!R.length) return "";
-  return `<div class="card"><h3>Data for reviews</h3>` + SECTIONS.map(([k, name]) => {
-    const rows = R.filter(r => r.section === k);
-    return rows.length ? `<div class="rv-sec">${name}</div>` + rows.map(r =>
-      `<div class="rv rv-${r.status}"><div class="rv-head"><span class="one t">${esc(r.title)}</span>
-        <span class="pill ${r.status === "pass" ? "ok" : r.status === "fail" ? "bad" : r.status === "due" ? "warn" : ""}">${STATUS[r.status]}</span></div>
-        <div class="bar"><i style="width:${r.pct}%"></i></div><div class="mut small">${esc(r.text)}</div></div>`).join("") : "";
-  }).join("") + `</div>`;
+  const dot = {pass: "ok", fail: "bad", due: "warn"};
+  return `<div class="card"><h3>Studies and checks</h3>` + R.map(r => `<div class="row"><span class="main">
+      <span class="one"><span class="dot ${dot[r.status] || ""}" style="${dot[r.status] ? "" : "background:var(--acc)"}"></span>${esc(r.title)}</span>
+      ${one(r.text, "mut small")}</span><span class="side">${mini(r.pct)}</span></div>`).join("") + `</div>`;
 }
 
-function server() {
-  const R = S.server || [];
-  if (!R.length) return "";
-  return `<div class="card"><h3>Server <span class="sub">· a full bar is a problem</span></h3>` + R.map(r =>
-    `<div class="step"><span class="n">·</span><div class="main">
-      <span class="one t">${esc(r.title)}</span><div class="bar"><i style="width:${r.pct}%"></i></div>${one(r.text, "mut small")}</div></div>`).join("") + `</div>`;
+// server traffic / disk / memory as pills (dashboard header), amber above 80%, red above 95%
+function gauges() {
+  const G = S.server || [];
+  const name = {traffic: "traffic", disk: "disk", memory: "mem"};
+  return `<div class="gauges">` + G.map(g => {
+    const c = g.pct > 95 ? "bad" : g.pct > 80 ? "warn" : "";
+    const size = g.key === "traffic" ? `${Math.round(g.have)} GB/${g.need / 1000} TB` : `${g.have.toFixed(1)}/${Math.round(g.need)} GB`;
+    return `<span class="pill ${c}" title="${esc(g.text)}">${name[g.key] || g.key} ${size}</span>`;
+  }).join("") + (S.tg ? "" : `<span class="pill warn">TG off</span>`) + `</div>`;
 }
 
-function runCard(r, title, hint) {
-  if (!r) return `<div class="card"><h3>${title} <span class="sub">· ${hint}</span></h3><span class="mut small">not started yet</span></div>`;
-  return `<div class="card"><h3>${title} <span class="sub">· running ${dur(Date.now() / 1000 - r.since)}</span></h3><div class="grid">
-    <div class="kpi"><b class="${cls(r.pnl_sol)}">${sol(r.pnl_sol)}</b><span>PnL SOL</span></div>
-    <div class="kpi"><b>${r.closed}</b><span>closed</span></div>
-    <div class="kpi"><b>${r.win_rate == null ? "–" : Math.round(r.win_rate * 100) + "%"}</b><span>win rate</span></div>
-    <div class="kpi"><b>${r.open}</b><span>open</span></div>
-    <div class="kpi"><b>${r.entries}</b><span>entries</span></div>
-    <div class="kpi"><b>${r.signals}</b><span>signals</span></div></div></div>`;
-}
-
-function results() {
-  const R = S.results;
-  if (!R || !R.view) return "";
-  const row = v => {
-    const g = R[v.key], l = g.last, a = g.at_stake;
-    const roi = g.invested ? g.pnl_sol / g.invested : null;
-    return `<div class="row"><span class="main"><span class="one">${esc(v.title)}
-        <span class="mut small"> · ${g.closed} closed · win ${g.win_rate == null ? "–" : Math.round(g.win_rate * 100) + "%"} · open ${g.open}</span></span>
-        <span class="one mut small">w/o best ${sol(g.pnl_ex_best)}${a && a.n ? ` · at ${a.stake} SOL <b class="${cls(a.pnl_sol)}">${sol(a.pnl_sol)}</b>` : ""}</span>
-        ${l ? `<span class="one small">last: <a class="mono" href="https://gmgn.ai/sol/token/${esc(l.mint)}">${short(l.mint)}</a>
-          <b class="${cls(l.pnl_sol)}">${sol(l.pnl_sol)}</b> <span class="mut">${esc(l.reason)} · ${ago(l.ts)}</span></span>` : ""}</span>
-      <span class="side"><b class="${cls(g.pnl_sol)}" style="font-size:16px">${g.closed ? sol(g.pnl_sol) : "–"}</b><br>
-        <span class="small ${cls(roi)}">${roi == null ? "" : pct(roi)}</span></span></div>`;
-  };
-  const e = R.view.earlier || {};
-  const old = Object.keys(e).filter(k => e[k].closed).map(k => `${k} ${sol(e[k].pnl_sol)} (${e[k].closed})`).join(" · ");
-  return `<div class="card"><h3>Results <span class="sub">· trailing exit, SOL, fees included</span></h3>${R.view.rows.map(row).join("")}
-    ${old ? `<div class="one mut small">Before: old exit rule ${old}</div>` : ""}</div>`;
+function openCard() {
+  const O = S.open || [];
+  const by = {};
+  O.forEach(p => by[p.group] = (by[p.group] || 0) + 1);
+  const head = O.length + (O.length ? " · " + Object.keys(by).sort().map(k => `${k} ${by[k]}`).join(", ") : "");
+  return `<div class="card"><h3>Open positions <span class="sub">· ${esc(head)}</span></h3>` + (O.map(p => `<div class="row"><span class="main">
+       <span class="one"><b>${esc(p.group)}</b> · <a class="mono" href="https://gmgn.ai/sol/token/${esc(p.mint)}">${short(p.mint)}</a></span>
+       <span class="one mut small">wallet ${short(p.wallet)} · held ${dur(p.held_s)}</span></span>
+       <span class="side">${p.mult ? `<b class="${p.mult >= 1 ? "ok" : "bad"}">x${p.mult.toFixed(2)}</b>` : '<span class="mut">–</span>'}</span></div>`).join("")
+     || '<span class="mut small">none</span>') + `</div>`;
 }
 
 function home() {
-  const R = S.runs || {};
-  const halted = S.risk.filter(r => r.halted);
-  const open = S.open.length ? S.open.map(p => `<div class="row"><span class="main">
-       <a class="mono" href="https://gmgn.ai/sol/token/${esc(p.mint)}">${short(p.mint)}</a>
-       <span class="mut small"> · ${esc(p.src || "")}</span></span><span class="side mut small">${dur(p.age_s)}</span></div>`).join("")
-     : `<span class="mut small">none</span>`;
   return `<div class="card"><div class="row"><span class="main"><span class="one">Kill switch
         <span class="pill ${S.kill ? "bad" : "ok"}">${S.kill ? "ON: entries blocked" : "off"}</span></span></span>
       <span class="side"><button class="act ${S.kill ? "" : "danger"}" onclick='action({action:"kill_toggle"},"${S.kill ? "Turn kill switch OFF?" : "Block all new entries?"}")'>${S.kill ? "Turn off" : "Stop entries"}</button></span></div></div>
-    ${halted.length ? `<div class="card"><h3>Live limits hit <span class="sub">· paper keeps trading</span></h3>${halted.map(r => `<div class="row"><span class="main">${one(r.key.slice(11) || "paper")}</span><span class="side warn">${esc(r.halted)}</span></div>`).join("")}</div>` : ""}
-    ${results()}
-    ${pipeline()}
-    ${reviews()}
-    ${server()}
-    <div class="card"><h3>Open positions</h3>${open}</div>
+    ${gauges()}
+    ${strategies()}
+    ${openCard()}
+    ${studies()}
+    ${pipeline()}`;
+}
+
+function trades() {
+  const icon = {enter: "🟢", exit: "⚪", partial_exit: "◐"};
+  const rows = (S.trades || []).map(d => `<div class="row">
+     <span class="main"><span class="one">${icon[d.action] || "•"} <b>${esc(d.group)}</b> <span class="mut">${esc(d.action)} · ${esc(d.reason || "")}</span></span>
+       <span class="one mono mut">${d.mint ? `<a href="https://gmgn.ai/sol/token/${esc(d.mint)}">${short(d.mint)}</a>` : ""}</span></span>
+     <span class="side">${d.pnl_sol != null ? `<b class="${cls(d.pnl_sol)}">${sol(d.pnl_sol)}</b><br>` : ""}
+       <span class="mut small">${d.roi != null ? pct(d.roi) + " · " : ""}${ago(d.ts)}</span></span></div>`).join("");
+  return `<div class="card"><h3>Trades <span class="sub">· latest</span></h3>${S.skips ? one(S.skips, "mut small") : ""}
+      ${rows || '<span class="mut small">no trades yet</span>'}</div>
     <div class="card"><h3>Autopilot</h3>${(S.events || []).map(e => `<div class="row"><span class="main">${one(e.what)}</span>
        <span class="side mut small">${ago(e.ts)}</span></div>`).join("") || '<span class="mut small">no events</span>'}</div>`;
 }
 
-function trades() {
-  const icon = {enter: "🟢", exit: "⚪", partial_exit: "◐", skip: "·", halt: "⛔"};
-  const rows = S.decisions.filter(d => d.run && d.run.startsWith("paper") && d.reason !== "already_open");
-  return `<div class="card"><h3>Trades <span class="sub">· latest</span></h3>` + (rows.map(d => `<div class="row">
-     <span class="main"><span class="one">${icon[d.action] || "•"} <b>${esc(d.action)}</b> <span class="mut">${esc(d.reason || "")}</span></span>
-       <span class="one mono mut">${d.run.startsWith("paper-probe") ? "probe" : d.run.startsWith("paper-watch") ? "watch" : d.run.startsWith("paper-filt") ? "filt" : d.run.startsWith("paper-repfix") ? "repfix" : d.run.startsWith("paper-repv") ? "repv" : d.run.startsWith("paper-rep") ? "rep" : "followed"}${d.mint ? ` · <a href="https://gmgn.ai/sol/token/${esc(d.mint)}">${short(d.mint)}</a>` : ""}</span></span>
-     <span class="side">${d.pnl_sol != null ? `<b class="${cls(d.pnl_sol)}">${sol(d.pnl_sol)}</b><br>` : ""}
-       <span class="mut small">${d.roi != null ? pct(d.roi) + " · " : ""}${ago(d.ts)}</span></span></div>`).join("")
-     || '<span class="mut small">no trades yet</span>') + `</div>`;
-}
-
+// feeds grouped by family with their providers as chips; drained runs and retired providers hidden (dashboard rules)
 function feeds() {
+  const F = S.feeds || {families: []};
+  const fd = F.families.map(f => `<div class="row"><span class="main"><span class="one"><span class="dot ${f.state}"></span><b>${esc(f.name)}</b>
+       <span class="mut small">${f.events.toLocaleString()} events</span></span>
+       ${f.providers.length ? `<div class="chips">${f.providers.map(p => `<span class="pill"><span class="dot ${p.state}"></span>${esc(p.name)}</span>`).join("")}</div>` : ""}
+       ${f.error ? one((f.state === "warn" ? ago(f.err_ts) + ": " : "") + f.short, f.state + " small") : one(f.note, "mut small")}</span>
+     <span class="side mut small">${ago(f.ok_ts)}</span></div>`).join("");
+  const head = `${F.live} live` + (F.bad ? ` · <span class="bad">${F.bad} failing</span>` : "") + (F.warn ? ` · <span class="warn">${F.warn} errors in 10 min</span>` : "");
   const prov = S.providers.map(p => `<div class="row"><span class="main"><span class="one"><span class="dot ${p.state}"></span>${esc(p.name)}
-       ${p.public ? "<span class='mut small'>public</span>" : ""}${p.via_proxy ? " <span class='mut small'>via proxy</span>" : ""}</span>
-       ${p.error ? one(p.error, (p.state === "bad" ? "bad" : "warn") + " small") : ""}</span>
-     <span class="side small">${p.today.toLocaleString()}${p.budget ? `<span class="mut"> / ${p.budget.toLocaleString()}</span>` : ""}</span></div>`).join("");
-  const fd = S.feeds.map(f => `<div class="row"><span class="main"><span class="one"><span class="dot ${f.state}"></span>${esc(f.feed)}</span>
-       ${f.error ? one(f.error, (f.ok ? "warn" : "bad") + " small") : one(f.note, "mut small")}</span>
-     <span class="side mut small">${ago(f.last_ok_ts)}</span></div>`).join("");
-  return `<div class="card"><h3>Data feeds</h3>${fd || "<span class='mut small'>none yet</span>"}</div>
+       ${p.public ? "<span class='mut small'>public</span>" : ""}${p.ws ? "" : " <span class='mut small'>no ws</span>"}</span>
+       ${p.error ? one(p.short, (p.state === "bad" ? "bad" : "warn") + " small") : ""}</span>
+     <span class="side small">${p.today.toLocaleString()}${p.budget ? `<span class="mut"> / ${Math.round(p.budget / 1000)}k</span><br>${mini(100 * p.today / p.budget)}` : ""}</span></div>`).join("");
+  return `${gauges()}<div class="card"><h3>Data feeds <span class="sub">· ${head}</span></h3>${fd || "<span class='mut small'>none yet</span>"}
+      ${F.quiet ? `<div class="mut small" style="margin-top:6px">${F.quiet} hidden: drained runs, retired providers, idle 1 h+</div>` : ""}</div>
      <div class="card"><h3>RPC providers <span class="sub">· calls today</span></h3>${prov}</div>`;
 }
 
