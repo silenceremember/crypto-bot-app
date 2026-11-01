@@ -165,8 +165,11 @@ function strategies() {
           <span class="one mut small"><b class="${cls(r.pnl_sol)}">${sol(r.pnl_sol)}</b> · ${r.n} trades${r.mean != null ? " · " + perTrade(r.mean, r.ci) : ""}</span></span>
         <span class="side">${state}</span></div>`;
     }).join("");
+    const verdict = s.status === "fail" ? `<span class="pill bad" title="${esc(s.hint)}">${esc(s.label)}</span>`
+      : s.status === "pass" ? '<span class="pill ok">pass</span>' : `${mini(s.pct)} <span class="mut small">${esc(s.hint)}</span>`;
     return `<div class="st"><div class="st-head"><span class="main one">${esc(s.title)}</span>
-        <span class="side ${cls(s.pnl_sol)}">${sol(s.pnl_sol)}</span></div>
+        <span class="side ${cls(s.pnl_sol)}">${s.closed ? sol(s.pnl_sol) : "–"}</span></div>
+      <div class="one small">${verdict}</div>
       <div class="one mut small">since ${hhmm(s.since)} · ${s.closed} trades · ${s.tokens} tokens · win ${s.win_rate == null ? "–" : Math.round(s.win_rate * 100) + "%"}${s.open ? ` · <span style="color:var(--acc)">${s.open} open</span>` : ""}</div>
       <div class="one small">${perTrade(s.mean, s.ci) || "–"}<span class="mut">/trade · −top1%</span> <span class="${cls(s.ex_top)}">${sol(s.ex_top)}</span>
         <span class="mut">· −best</span> <span class="${cls(s.ex_wallet)}">${sol(s.ex_wallet)}</span>${s.sim != null ? ` <span class="mut">· sim ${pct(s.sim)}</span>` : ""}</div>
