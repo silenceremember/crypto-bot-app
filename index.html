@@ -154,7 +154,7 @@ const mini = p => `<span class="mini"><i style="width:${Math.min(100, p || 0).to
 // strategies with their frozen rules right under them (dashboard "Strategies and rules")
 function strategies() {
   const L = S.strategies || [];
-  if (!L.length) return "";
+  if (!L.length) return S.warming ? '<div class="card" style="opacity:.7">Building strategy cards after a restart...</div>' : "";
   const rows = L.map(s => {
     const rules = s.rules.map(r => {
       const state = r.status === "pass" ? '<span class="pill ok">pass</span>'
