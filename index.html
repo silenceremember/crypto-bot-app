@@ -82,7 +82,7 @@ const cls = x => x == null ? "" : x > 0 ? "ok" : x < 0 ? "bad" : "";
 // one line, cut with an ellipsis; the full text on long press (title)
 const one = (t, c = "") => t ? `<span class="one ${c}" title="${esc(t)}">${esc(t)}</span>` : "";
 
-// Served from GitHub Pages (permanent address): the data API lives on the owner's PC behind a tunnel
+// Served from GitHub Pages (permanent address): the data API lives on cb-server behind a tunnel
 // whose address changes; the bot keeps it in tunnel.json of this repo. Served from the tunnel: same origin.
 const ON_PAGES = location.hostname.endsWith("github.io");
 let BASE = ON_PAGES ? null : "";
@@ -105,7 +105,7 @@ async function api(path, body, retried) {
     BASE = null;
     return api(path, body, true);
   }
-  if (!r) throw new Error("Bot is offline (PC or tunnel down). Retrying…");
+  if (!r) throw new Error("Bot is offline (server or tunnel down). Retrying…");
   if (r.status === 401) throw new Error("Unauthorized: open this from your paired Telegram bot.");
   if (!r.ok) throw new Error("HTTP " + r.status);
   return r.json();
@@ -165,14 +165,25 @@ function strategies() {
           <span class="one mut small"><b class="${cls(r.pnl_sol)}">${sol(r.pnl_sol)}</b> · ${r.n} trades${r.mean != null ? " · " + perTrade(r.mean, r.ci) : ""}</span></span>
         <span class="side">${state}</span></div>`;
     }).join("");
-    const verdict = s.status === "fail" ? `<span class="pill bad" title="${esc(s.hint)}">${esc(s.label)}</span>`
-      : s.status === "pass" ? '<span class="pill ok">pass</span>' : `${mini(s.pct)} <span class="mut small">${esc(s.hint)}</span>`;
+    const progress = `${mini(s.pct)} <span class="mut small" title="${esc(s.hint)}">${esc(s.hint)}</span>`;
+    const verdict = s.badge ? progress
+      : s.status === "fail" ? `<span class="pill bad" title="${esc(s.hint)}">${esc(s.label)}</span>`
+      : s.status === "pass" ? '<span class="pill ok">pass</span>' : progress;
+    const badgeColor = s.badge ? ({pass: "ok", fail: "bad", due: "warn"})[s.badge[0]] || "" : "";
+    const badge = s.badge ? ` <span class="pill ${badgeColor}">${esc(s.badge[1])}</span>` : "";
+    const pnl = s.currency ? s.pnl : s.pnl_sol;
+    const pnlText = s.currency && pnl != null ? `${pnl >= 0 ? "+" : ""}${pnl.toFixed(2)} ${esc(s.currency)}`
+      : s.closed ? sol(pnl) : "–";
+    const summary = `${s.since ? `since ${hhmm(s.since)} · ` : ""}${s.closed} trades`
+      + (s.tokens == null ? "" : ` · ${s.tokens} tokens · win ${s.win_rate == null ? "–" : Math.round(s.win_rate * 100) + "%"}`)
+      + (s.open ? ` · <span style="color:var(--acc)">${s.open} open</span>` : "");
+    const stats = s.tokens == null ? "" : `<div class="one small">${perTrade(s.mean, s.ci) || "–"}<span class="mut">/trade · −top1%</span> <span class="${cls(s.ex_top)}">${sol(s.ex_top)}</span>
+        <span class="mut">· −best</span> <span class="${cls(s.ex_wallet)}">${sol(s.ex_wallet)}</span>${s.sim != null ? ` <span class="mut">· sim ${pct(s.sim)}</span>` : ""}</div>`;
     return `<div class="st"><div class="st-head"><span class="main one">${esc(s.title)}</span>
-        <span class="side ${cls(s.pnl_sol)}">${s.closed ? sol(s.pnl_sol) : "–"}</span></div>
+        <span class="side ${cls(pnl)}">${pnlText}</span></div>
       <div class="one small">${verdict}</div>
-      <div class="one mut small">since ${hhmm(s.since)} · ${s.closed} trades · ${s.tokens} tokens · win ${s.win_rate == null ? "–" : Math.round(s.win_rate * 100) + "%"}${s.open ? ` · <span style="color:var(--acc)">${s.open} open</span>` : ""}</div>
-      <div class="one small">${perTrade(s.mean, s.ci) || "–"}<span class="mut">/trade · −top1%</span> <span class="${cls(s.ex_top)}">${sol(s.ex_top)}</span>
-        <span class="mut">· −best</span> <span class="${cls(s.ex_wallet)}">${sol(s.ex_wallet)}</span>${s.sim != null ? ` <span class="mut">· sim ${pct(s.sim)}</span>` : ""}</div>
+      <div class="one mut small">${summary}${badge}</div>
+      ${stats}${one(s.note, "mut small")}
       ${rules}</div>`;
   }).join("");
   return `<div class="card"><h3>Strategies and rules <span class="sub">· paper, fees incl.</span></h3>${rows}
